@@ -142,10 +142,28 @@ class MainActivity : Activity() {
                 requestPermissions(arrayOf(Manifest.permission.CAMERA), 302)
             } else toast("Camera permission is already available.")
         })
-        addPermissionCard(body, "04", "Modify system settings", "Optional. Enables the brightness slider to change screen brightness from the panel.", Settings.System.canWrite(this), "OPEN SETTINGS", {
+        addPermissionCard(body, "04", "Modify system settings", "Required only for the brightness slider. Android asks you to approve this special access on its own settings screen.", Settings.System.canWrite(this), "OPEN SETTINGS", {
             if (!Settings.System.canWrite(this)) {
-                startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName")))
-            } else toast("System settings access is already enabled.")
+                val accessIntent = Intent(
+                    Settings.ACTION_MANAGE_WRITE_SETTINGS,
+                    Uri.parse("package:$packageName")
+                )
+                try {
+                    startActivity(accessIntent)
+                } catch (_: Exception) {
+                    toast("Could not open the system-settings access page. Opening app details instead.")
+                    try {
+                        startActivity(Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:$packageName")
+                        ))
+                    } catch (_: Exception) {
+                        toast("Open Smart Space app info from Android Settings.")
+                    }
+                }
+            } else {
+                toast("System settings access is already enabled.")
+            }
         })
         addPermissionCard(body, "05", "Background activity", "Recommended. Review battery restrictions so Android is less likely to stop the active service.", isIgnoringBatteryOptimizations(), "REVIEW", {
             try {
@@ -281,7 +299,7 @@ class MainActivity : Activity() {
         body.addView(text("CREATED BY", 10f, gold, true), marginParams(-1, -2, top = 8))
         body.addView(text("CFSTUDIO-project", 18f, Color.WHITE, true), marginParams(-1, -2, top = 5))
         body.addView(button("SEE MORE  ↗", true) { openUrl(repoUrl) }, marginParams(-1, dp(52), top = 16))
-        body.addView(text("Smart Space · SS · Version 2.0.0", 11f, muted), marginParams(-1, -2, top = 14, bottom = 20))
+        body.addView(text("Smart Space · SS · Version 2.0.1", 11f, muted), marginParams(-1, -2, top = 14, bottom = 20))
         addNavigation(body)
         root.removeAllViews()
         root.addView(wrapScroll(body))

@@ -3,7 +3,7 @@
 <img src="assets/space-mark.svg" width="104" alt="Smart Space symbol" />
 
 # SMART SPACE
-### V2.0.0 · GAMING CONTROL LAYER FOR ANDROID
+### V2.0.1 · GAMING CONTROL LAYER FOR ANDROID
 
 **A clean edge trigger. A live control surface. Device tools with real permissions.**
 
@@ -118,7 +118,7 @@ These hand-authored diagrams show the intended interface structure. They are des
 | Display over other apps | Shows the edge trigger and panel above other apps |
 | Notifications | Shows the active foreground-service notification on Android 13+ where requested |
 | Camera | Turns the physical camera flash on as a torch; no photo capture feature is provided |
-| Modify system settings | Allows the brightness slider to change the system screen brightness |
+| Modify system settings (`WRITE_SETTINGS`) | Declared in the manifest; user must also enable the special access in Android Settings before the brightness slider can change screen brightness |
 | Notification policy access | Allows the user-controlled Do Not Disturb action |
 | Battery settings | Lets the user review OEM background restrictions; no hidden exemption is applied |
 | Shizuku | Optional authorization foundation; the user starts Shizuku separately |
@@ -139,11 +139,17 @@ Shizuku can expose a service identity provided by its own server, depending on h
 - **Thermal status:** provided by Android on supported versions.
 - **Game FPS:** not available as a standard cross-app metric to an ordinary app. Smart Space does not use display refresh rate as a substitute.
 
+## V2.0.1 patch notes
+
+- Added the missing `android.permission.WRITE_SETTINGS` manifest declaration required by Android for Modify System Settings access.
+- Improved the permission action with a fallback to the app-details screen if the dedicated Android settings page cannot be opened.
+- AUTHORIZED status is re-evaluated when the app resumes, so the readiness label refreshes after returning from Android Settings.
+
 ## Android behavior and API limits
 
 Wi-Fi and Bluetooth are intentionally handled through system UI. Android 10+ restricts ordinary apps from enabling or disabling Wi-Fi through `WifiManager.setWifiEnabled()`. For apps targeting Android 13+, `BluetoothAdapter.enable()` and `disable()` are deprecated and return `false` for ordinary apps. Smart Space therefore opens the user-facing system settings instead of showing a fake toggle.
 
-The brightness action requires the user to grant Modify System Settings access. Volume uses the music stream through AudioManager. Do Not Disturb requires Notification Policy Access. Flashlight control requires camera permission and compatible flash hardware.
+The brightness action requires both the `android.permission.WRITE_SETTINGS` manifest declaration and the user-granted Modify System Settings special access. The app opens `Settings.ACTION_MANAGE_WRITE_SETTINGS` for this approval and checks it with `Settings.System.canWrite()` whenever the AUTHORIZED page resumes. Volume uses the music stream through AudioManager. Do Not Disturb requires Notification Policy Access. Flashlight control requires camera permission and compatible flash hardware.
 
 ## Platform
 
@@ -255,4 +261,4 @@ Smart Space is an independent open-source project. The repository is the canonic
 - [Android CameraManager torch API](https://developer.android.com/reference/android/hardware/camera2/CameraManager#setTorchMode(java.lang.String,boolean))
 - [Shizuku API](https://github.com/RikkaApps/Shizuku-API)
 
-<div align="center"><sub>SMART SPACE V2.0.0 · SS · ANDROID GAMING CONTROL LAYER</sub></div>
+<div align="center"><sub>SMART SPACE V2.0.1 · SS · ANDROID GAMING CONTROL LAYER</sub></div>
