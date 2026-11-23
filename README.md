@@ -54,7 +54,7 @@ The following diagrams are hand-authored SVG previews of the product direction. 
 |---|---|
 | Real controls | Use Android APIs where allowed, or open the relevant system panel. No decorative toggles. |
 | Honest telemetry | CPU, memory and battery values are read from device sources. GPU is best-effort. Cross-app game FPS is unavailable where Android does not expose it. |
-| Edge-first | One slim vertical | trigger opens the floating surface. No floating bubble or oversized shortcut. |
+| Edge-first | One slim vertical &#124; trigger opens the floating surface. No floating bubble or oversized shortcut. |
 | Orientation-aware | Activity and overlay dimensions adapt to the current display in portrait and landscape. |
 | User-authorized | Overlay, notifications, camera/torch and optional system access are explained before activation. |
 | Respect Android | A foreground service keeps the user-enabled overlay available with a visible notification. Android can still apply background and power restrictions. |
@@ -86,7 +86,7 @@ The following diagrams are hand-authored SVG previews of the product direction. 
 | Thermal status | Included | Android thermal status API on supported versions |
 | Cross-app game FPS | Not available in this foundation | Never replaced with display refresh rate or a guessed value |
 | Wi-Fi / Bluetooth | System hand-off | Opens Android connectivity controls; ordinary apps cannot freely toggle every radio on modern Android |
-| Flashlight | Permission-gated | CameraManager torch mode, where available |
+| Flashlight | Permission-gated | CameraManager torch mode, where available |\n| Do Not Disturb | Permission-gated | Toggles through NotificationManager after the user grants policy access |
 | Volume | Included | AudioManager music stream slider |
 | Brightness | Permission-gated | Requires user-granted Modify System Settings access |
 
@@ -122,7 +122,7 @@ Smart Space does not silently grant itself privileged access.
 | Display over other apps | Draw the trigger and panel over games/apps | Enable Smart Space in Android overlay access settings |
 | Notifications | Show active service status | Runtime permission on Android 13+ |
 | Camera | Turn on the physical flash as a torch | Runtime permission; only used by the flashlight action |
-| Modify system settings | Change screen brightness from the panel | Grant special access in Android Settings |
+| Modify system settings | Change screen brightness from the panel | Grant special access in Android Settings |\n| Notification policy access | Let the DND control switch Do Not Disturb on/off | Grant access in Android Settings when the control is first used |
 | Battery optimization | Review background restrictions | Open Android battery settings; exemption is optional |
 | Shizuku | Optional advanced access | Install and start Shizuku separately, then authorize Smart Space through Shizuku's real permission dialog |
 
