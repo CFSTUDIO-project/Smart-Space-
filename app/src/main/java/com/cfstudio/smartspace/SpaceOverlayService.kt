@@ -272,7 +272,46 @@ class SpaceOverlayService : Service() {
         }
 
         val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        val brand = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val brand = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            contentDescription = "Drag here to move the floating panel"
+            setOnTouchListener(object : View.OnTouchListener {
+                private var downX = 0f
+                private var downY = 0f
+                private var startX = 0
+                private var startY = 0
+                private var moved = false
+
+                override fun onTouch(view: View, event: MotionEvent): Boolean {
+                    val params = panelParams ?: return false
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN -> {
+                            downX = event.rawX
+                            downY = event.rawY
+                            startX = params.x
+                            startY = params.y
+                            moved = false
+                            return true
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            val dx = event.rawX - downX
+                            val dy = event.rawY - downY
+                            if (abs(dx) > dp(4) || abs(dy) > dp(4)) moved = true
+                            if (moved) {
+                                val maxX = (resources.displayMetrics.widthPixels - params.width).coerceAtLeast(0)
+                                val maxY = resources.displayMetrics.heightPixels / 2
+                                params.x = (startX - dx.toInt()).coerceIn(0, maxX)
+                                params.y = (startY + dy.toInt()).coerceIn(-maxY, maxY)
+                                try { panelView?.let { windows.updateViewLayout(it, params) } } catch (_: Exception) { }
+                            }
+                            return true
+                        }
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> return true
+                    }
+                    return true
+                }
+            })
+        }
         brand.addView(label("SMART SPACE", 16f, Color.WHITE, true))
         brand.addView(label("GAMING CONTROL LAYER", 9f, gold, true).apply { letterSpacing = .12f }, topMargin(4))
         header.addView(brand, LinearLayout.LayoutParams(0, -2, 1f))
@@ -324,7 +363,7 @@ class SpaceOverlayService : Service() {
             gravity = Gravity.CENTER_VERTICAL or Gravity.END
             setPadding(0, dp(8), 0, 0)
         }
-        footer.addView(label("DRAG CORNER TO RESIZE", 9f, muted, true), LinearLayout.LayoutParams(0, -2, 1f))
+        footer.addView(label("DRAG TITLE TO MOVE · CORNER TO RESIZE", 9f, muted, true), LinearLayout.LayoutParams(0, -2, 1f))
         val grip = label("◢", 20f, gold, true).apply {
             gravity = Gravity.CENTER
             background = rounded(Color.rgb(39, 35, 27), 9f)
