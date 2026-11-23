@@ -337,7 +337,7 @@ class MainActivity : Activity() {
     private fun makePage() = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(22), dp(24), dp(22), dp(12))
-        setBackgroundColor(background)
+        setBackgroundColor(this@MainActivity.background)
     }
 
     private fun wrapScroll(content: View): ScrollView = ScrollView(this).apply {
