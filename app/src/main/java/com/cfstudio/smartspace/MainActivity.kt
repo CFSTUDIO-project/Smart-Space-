@@ -99,7 +99,14 @@ class MainActivity : Activity() {
         val body = makePage()
         addHeader(body, "AUTHORIZED", "FIRST-RUN CONFIGURATION")
         body.addView(text("Prepare your device", 25f, Color.WHITE, true), marginParams(-1, -2, top = 12))
-        body.addView(text("Smart Space uses Android's real permission screens. Review each access below; optional tools can stay disabled.", 14f, muted), marginParams(-1, -2, top = 8, bottom = 18))
+        body.addView(text("Smart Space uses Android's real permission screens. Review each access below; optional tools can stay disabled.", 14f, muted), marginParams(-1, -2, top = 8, bottom = 10))
+        val guide = ImageView(this).apply {
+            setImageResource(R.drawable.auth_guide)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            contentDescription = "Illustration of overlay access leading to the Smart Space floating panel"
+        }
+        body.addView(guide, marginParams(-1, dp(142), bottom = 8))
+        body.addView(text("ALLOW OVERLAY ACCESS  →  FLOATING PANEL", 9f, gold, true), marginParams(-1, -2, bottom = 15))
         addPermissionCard(body, "01", "Display over other apps", "Required. Lets the slim | trigger and panel appear above games and other apps.", overlayGranted(), "AUTHORIZE", {
             if (!Settings.canDrawOverlays(this)) {
                 startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
