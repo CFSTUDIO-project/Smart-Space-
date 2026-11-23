@@ -94,10 +94,11 @@ class SpaceOverlayService : Service() {
         }
 
         if (!Settings.canDrawOverlays(this)) {
+            prefs.edit().putBoolean("overlay_running", false).putBoolean("overlay_window_ready", false).apply()
             stopSelf()
             return START_NOT_STICKY
         }
-        prefs.edit().putBoolean("overlay_running", true).apply()
+        prefs.edit().putBoolean("overlay_running", true).putBoolean("overlay_window_ready", false).apply()
         if (handleView == null && panelView == null) showHandle()
         handler.removeCallbacks(refreshTask)
         handler.post(refreshTask)
@@ -194,6 +195,7 @@ class SpaceOverlayService : Service() {
             windows.addView(root, params)
             handleView = root
             handleParams = params
+            prefs.edit().putBoolean("overlay_running", true).putBoolean("overlay_window_ready", true).apply()
         } catch (_: Exception) {
             stopSelf()
         }
@@ -203,6 +205,7 @@ class SpaceOverlayService : Service() {
         if (panelView != null) return
         handleView?.let { try { windows.removeView(it) } catch (_: Exception) { } }
         handleView = null
+        prefs.edit().putBoolean("overlay_window_ready", false).apply()
         val screenW = resources.displayMetrics.widthPixels
         val screenH = resources.displayMetrics.heightPixels
         val density = resources.displayMetrics.density
@@ -224,6 +227,7 @@ class SpaceOverlayService : Service() {
             windows.addView(panel, p)
             panelView = panel
             panelParams = p
+            prefs.edit().putBoolean("overlay_running", true).putBoolean("overlay_window_ready", true).apply()
             panel.post {
                 panel.animate().translationX(0f).setDuration(360L)
                     .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
@@ -596,7 +600,7 @@ class SpaceOverlayService : Service() {
     override fun onDestroy() {
         handler.removeCallbacks(refreshTask)
         removeWindows()
-        prefs.edit().putBoolean("overlay_running", false).apply()
+        prefs.edit().putBoolean("overlay_running", false).putBoolean("overlay_window_ready", false).apply()
         super.onDestroy()
     }
 
