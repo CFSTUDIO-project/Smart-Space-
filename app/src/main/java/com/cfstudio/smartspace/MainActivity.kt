@@ -344,7 +344,7 @@ class MainActivity : Activity() {
         isFillViewport = true
         clipToPadding = false
         addView(content, ViewGroup.LayoutParams(-1, -2))
-        setBackgroundColor(background)
+        setBackgroundColor(this@MainActivity.background)
     }
 
     private fun card(): LinearLayout = LinearLayout(this).apply {
