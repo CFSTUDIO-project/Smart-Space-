@@ -457,7 +457,7 @@ class SpaceOverlayService : Service() {
         gpuGauge?.setValue(sample.gpuPercent)
         val cpuClock = sample.cpuMHz?.let { "${it} MHz" } ?: "N/A"
         val gpuClock = sample.gpuMHz?.let { "${it} MHz" } ?: "N/A"
-        val ram = if (sample.totalRamMb > 0) "${sample.usedRamMb / 1024.0f format 1} / ${sample.totalRamMb / 1024.0f format 1} GB" else "N/A"
+        val ram = if (sample.totalRamMb > 0) "${String.format("%.1f", sample.usedRamMb / 1024f)} / ${String.format("%.1f", sample.totalRamMb / 1024f)} GB" else "N/A"
         val battery = sample.batteryPercent?.let { "${it}%" } ?: "N/A"
         val batteryTemp = sample.batteryTemperatureC?.let { "${it} °C" } ?: "N/A"
         telemetry?.text = "CPU LOAD       $lastCpu      •      CPU CLOCK       $cpuClock\nGPU LOAD       ${sample.gpuPercent?.let { "${it.roundToInt()}%" } ?: "N/A"}      •      GPU CLOCK       $gpuClock\nRAM USED       $ram\nBATTERY       $battery      •      BATTERY TEMP       $batteryTemp\nTHERMAL STATUS       ${sample.thermalStatus}\nGAME FPS       N/A  ·  Not exposed by standard cross-app APIs"
@@ -532,7 +532,6 @@ class SpaceOverlayService : Service() {
         bottomMargin = dp(bottom)
     }
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
-    private val Float.format: (Int) -> String get() = { digits -> "%.$digits" .format(this) }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
