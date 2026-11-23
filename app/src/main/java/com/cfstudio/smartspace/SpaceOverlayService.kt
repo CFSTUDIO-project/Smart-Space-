@@ -314,6 +314,47 @@ class SpaceOverlayService : Service() {
         content.addView(label("FPS for other apps is not exposed on this device/API. Smart Space will not substitute refresh rate or make up a value.", 11f, muted, false), margins(top = 16, bottom = 18))
         scroll.addView(content, ViewGroup.LayoutParams(-1, -2))
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+
+        val footer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL or Gravity.END
+            setPadding(0, dp(8), 0, 0)
+        }
+        footer.addView(label("DRAG CORNER TO RESIZE", 9f, muted, true), LinearLayout.LayoutParams(0, -2, 1f))
+        val grip = label("◢", 20f, gold, true).apply {
+            gravity = Gravity.CENTER
+            background = rounded(Color.rgb(39, 35, 27), 9f)
+            setOnTouchListener(object : View.OnTouchListener {
+                private var downX = 0f
+                private var downY = 0f
+                private var startWidth = 0
+                private var startHeight = 0
+                override fun onTouch(view: View, event: MotionEvent): Boolean {
+                    val params = panelParams ?: return false
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN -> {
+                            downX = event.rawX
+                            downY = event.rawY
+                            startWidth = params.width
+                            startHeight = params.height
+                            return true
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            val maxWidth = resources.displayMetrics.widthPixels
+                            val maxHeight = resources.displayMetrics.heightPixels
+                            params.width = (startWidth - (event.rawX - downX).toInt()).coerceIn(dp(280), maxWidth)
+                            params.height = (startHeight - (event.rawY - downY).toInt()).coerceIn(dp(360), maxHeight)
+                            try { panelView?.let { windows.updateViewLayout(it, params) } } catch (_: Exception) { }
+                            return true
+                        }
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> return true
+                    }
+                    return true
+                }
+            })
+        }
+        footer.addView(grip, LinearLayout.LayoutParams(dp(38), dp(34)))
+        root.addView(footer, LinearLayout.LayoutParams(-1, dp(42)))
         return root
     }
 
