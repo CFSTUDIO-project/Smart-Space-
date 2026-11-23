@@ -27,6 +27,7 @@ import android.widget.Space
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import rikka.shizuku.Shizuku
 
 class MainActivity : Activity() {
     private enum class Page { AUTHORIZED, HOME, SETTINGS, ABOUT }
@@ -39,6 +40,18 @@ class MainActivity : Activity() {
     private val surface = Color.rgb(25, 28, 34)
     private val background = Color.rgb(10, 12, 15)
     private val repoUrl = "https://github.com/CFSTUDIO-project/Smart-Space-"
+    private val shizukuPermissionListener = Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
+        if (requestCode == SHIZUKU_REQUEST_CODE) {
+            val granted = grantResult == PackageManager.PERMISSION_GRANTED
+            prefs.edit().putBoolean("shizuku_granted", granted).apply()
+            toast(if (granted) "Shizuku access authorized." else "Shizuku access was not granted.")
+            if (page == Page.AUTHORIZED) showAuthorized()
+        }
+    }
+
+    companion object {
+        private const val SHIZUKU_REQUEST_CODE = 604
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,6 +60,7 @@ class MainActivity : Activity() {
         window.decorView.systemUiVisibility = 0
         root = FrameLayout(this)
         setContentView(root)
+        Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
         showSplash()
     }
 
@@ -135,10 +149,23 @@ class MainActivity : Activity() {
             }
         })
         val shizukuInstalled = packageInstalled("moe.shizuku.privileged.api")
-        addPermissionCard(body, "06", "Shizuku (optional)", if (shizukuInstalled) "Shizuku app detected. The current build does not request Shizuku privileges; overlay and device basics work without it." else "Optional advanced access. Install and start Shizuku separately; this is not root and is not required for the overlay.", false, if (shizukuInstalled) "OPEN SHIZUKU" else "SHIZUKU GUIDE", {
-            val launch = packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
-            if (launch != null) startActivity(launch) else openUrl("https://shizuku.rikka.app/")
-        })
+        val shizukuConnected = shizukuBinderReady()
+        val shizukuAllowed = shizukuGranted()
+        val shizukuDescription = when {
+            shizukuAllowed -> "Shizuku has authorized Smart Space. This permission is optional; the current release uses it for authorization status only."
+            !shizukuInstalled -> "Optional advanced access. Install Shizuku first. It is not root and is not required for the floating panel."
+            !shizukuConnected -> "Shizuku is installed but its service is not running. Open Shizuku, start its service, then return here to authorize Smart Space."
+            else -> "Shizuku service connected. Tap AUTHORIZE to open its real permission dialog for Smart Space."
+        }
+        val shizukuAction = when {
+            shizukuAllowed -> "AUTHORIZED  ✓"
+            !shizukuInstalled -> "INSTALL GUIDE"
+            !shizukuConnected -> "OPEN SHIZUKU"
+            else -> "AUTHORIZE"
+        }
+        addPermissionCard(body, "06", "Shizuku (optional)", shizukuDescription, shizukuAllowed, shizukuAction) {
+            requestShizukuAccess()
+        }
         body.addView(text("Tutorial", 17f, Color.WHITE, true), marginParams(-1, -2, top = 18))
         body.addView(text("1. Tap AUTHORIZE and enable the requested access in Android Settings.\n2. Return to Smart Space; the status refreshes automatically.\n3. When Display over other apps shows READY, tap NEXT.\n4. In the dashboard, activate Smart Space to place the | handle on your screen.", 13f, muted), marginParams(-1, -2, top = 8))
         val next = button("NEXT  →", true) {
@@ -396,6 +423,43 @@ class MainActivity : Activity() {
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
     private fun dp(value: Float): Float = value * resources.displayMetrics.density
 
+    private fun shizukuBinderReady(): Boolean = try {
+        Shizuku.pingBinder()
+    } catch (_: Exception) {
+        false
+    }
+
+    private fun shizukuGranted(): Boolean = try {
+        shizukuBinderReady() && !Shizuku.isPreV11() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+    } catch (_: Exception) {
+        false
+    }
+
+    private fun requestShizukuAccess() {
+        if (!packageInstalled("moe.shizuku.privileged.api")) {
+            openUrl("https://shizuku.rikka.app/download/")
+            return
+        }
+        if (!shizukuBinderReady()) {
+            val launch = packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
+            if (launch != null) startActivity(launch) else openUrl("https://shizuku.rikka.app/")
+            toast("Start the Shizuku service, then return to Smart Space.")
+            return
+        }
+        try {
+            if (Shizuku.isPreV11()) {
+                toast("Please update Shizuku to version 11 or newer.")
+            } else if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                toast("Shizuku is already authorized.")
+                showAuthorized()
+            } else {
+                Shizuku.requestPermission(SHIZUKU_REQUEST_CODE)
+            }
+        } catch (e: Exception) {
+            toast("Shizuku is not ready: ${e.message ?: "check its service status"}")
+        }
+    }
+
     private fun overlayGranted() = Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(this)
     private fun notificationGranted() = Build.VERSION.SDK_INT < 33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     private fun cameraGranted() = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
@@ -453,6 +517,11 @@ class MainActivity : Activity() {
             Page.SETTINGS -> showSettings()
             Page.ABOUT -> showAbout()
         }
+    }
+
+    override fun onDestroy() {
+        Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
+        super.onDestroy()
     }
 
     @Deprecated("Deprecated in Android API")
