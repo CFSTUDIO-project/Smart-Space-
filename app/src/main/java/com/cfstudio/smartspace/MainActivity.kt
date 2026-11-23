@@ -281,7 +281,7 @@ class MainActivity : Activity() {
         body.addView(text("CREATED BY", 10f, gold, true), marginParams(-1, -2, top = 8))
         body.addView(text("CFSTUDIO-project", 18f, Color.WHITE, true), marginParams(-1, -2, top = 5))
         body.addView(button("SEE MORE  ↗", true) { openUrl(repoUrl) }, marginParams(-1, dp(52), top = 16))
-        body.addView(text("Smart Space · SS · Version 1.0.0", 11f, muted), marginParams(-1, -2, top = 14, bottom = 20))
+        body.addView(text("Smart Space · SS · Version 2.0.0", 11f, muted), marginParams(-1, -2, top = 14, bottom = 20))
         addNavigation(body)
         root.removeAllViews()
         root.addView(wrapScroll(body))

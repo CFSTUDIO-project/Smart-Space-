@@ -319,9 +319,12 @@ class SpaceOverlayService : Service() {
             setPadding((9 * density).toInt(), (6 * density).toInt(), (9 * density).toInt(), (6 * density).toInt())
             background = rounded(Color.rgb(26, 48, 39), 8f)
         })
-        val close = label("×", 28f, Color.WHITE, false).apply {
-            gravity = Gravity.CENTER
-            setPadding((12 * density).toInt(), 0, 0, 0)
+        val close = ImageView(this).apply {
+            setImageResource(R.drawable.ic_close)
+            setColorFilter(Color.WHITE)
+            contentDescription = "Close floating panel"
+            scaleType = ImageView.ScaleType.CENTER
+            setPadding(dp(11), dp(11), dp(11), dp(11))
             setOnClickListener { closePanel() }
         }
         header.addView(close, LinearLayout.LayoutParams((42 * density).toInt(), (42 * density).toInt()))
@@ -334,7 +337,7 @@ class SpaceOverlayService : Service() {
             overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
         }
         val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        content.addView(label("DEVICE PERFORMANCE", 10f, gold, true), margins(top = 14, bottom = 10))
+        content.addView(sectionHeader(R.drawable.ic_chip, "DEVICE PERFORMANCE"), margins(top = 14, bottom = 10))
         val gauges = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         cpuGauge = GaugeView(this, "CPU")
         gpuGauge = GaugeView(this, "GPU")
@@ -346,13 +349,13 @@ class SpaceOverlayService : Service() {
         telemetry?.setPadding((13 * density).toInt(), (12 * density).toInt(), (13 * density).toInt(), (12 * density).toInt())
         telemetry?.background = rounded(Color.rgb(29, 32, 39), 14f)
         content.addView(telemetry, margins(top = 8))
-        content.addView(label("QUICK CONTROLS", 10f, gold, true), margins(top = 18, bottom = 10))
+        content.addView(sectionHeader(R.drawable.ic_controls, "QUICK CONTROLS"), margins(top = 18, bottom = 10))
         content.addView(controlGrid())
-        content.addView(label("BRIGHTNESS", 10f, gold, true), margins(top = 16, bottom = 5))
+        content.addView(sectionHeader(R.drawable.ic_brightness, "BRIGHTNESS"), margins(top = 16, bottom = 5))
         content.addView(brightnessControl())
-        content.addView(label("VOLUME", 10f, gold, true), margins(top = 14, bottom = 5))
+        content.addView(sectionHeader(R.drawable.ic_volume, "VOLUME"), margins(top = 14, bottom = 5))
         content.addView(volumeControl())
-        content.addView(label("YOUR APPS", 10f, gold, true), margins(top = 18, bottom = 8))
+        content.addView(sectionHeader(R.drawable.ic_apps, "YOUR APPS"), margins(top = 18, bottom = 8))
         content.addView(installedApps())
         content.addView(label("FPS for other apps is not exposed on this device/API. Smart Space will not substitute refresh rate or make up a value.", 11f, muted, false), margins(top = 16, bottom = 18))
         scroll.addView(content, ViewGroup.LayoutParams(-1, -2))
@@ -364,9 +367,12 @@ class SpaceOverlayService : Service() {
             setPadding(0, dp(8), 0, 0)
         }
         footer.addView(label("DRAG TITLE TO MOVE · CORNER TO RESIZE", 9f, muted, true), LinearLayout.LayoutParams(0, -2, 1f))
-        val grip = label("◢", 20f, gold, true).apply {
-            gravity = Gravity.CENTER
+        val grip = ImageView(this).apply {
+            setImageResource(R.drawable.ic_resize)
+            setColorFilter(gold)
+            scaleType = ImageView.ScaleType.CENTER
             background = rounded(Color.rgb(39, 35, 27), 9f)
+            contentDescription = "Resize panel"
             setOnTouchListener(object : View.OnTouchListener {
                 private var downX = 0f
                 private var downY = 0f
@@ -401,6 +407,27 @@ class SpaceOverlayService : Service() {
         return root
     }
 
+    private fun sectionHeader(iconRes: Int, title: String): View {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val icon = ImageView(this).apply {
+            setImageResource(iconRes)
+            setColorFilter(gold)
+            contentDescription = title
+        }
+        row.addView(icon, LinearLayout.LayoutParams(dp(17), dp(17)))
+        row.addView(label(title, 10f, gold, true), LinearLayout.LayoutParams(-2, -2).apply {
+            marginStart = dp(8)
+        })
+        val rule = View(this).apply { background = rounded(Color.rgb(48, 51, 58), 1f) }
+        row.addView(rule, LinearLayout.LayoutParams(0, dp(1), 1f).apply {
+            marginStart = dp(12)
+        })
+        return row
+    }
+
     private fun controlGrid(): View {
         val grid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val rows = listOf(
@@ -429,18 +456,32 @@ class SpaceOverlayService : Service() {
             isClickable = true
             isFocusable = true
         }
-        val icon = when (name) {
-            "Wi-Fi" -> "⌁"
-            "Bluetooth" -> "ᛒ"
-            "Flashlight" -> "✦"
-            "Auto-rotate" -> "↻"
-            "DND" -> "◐"
-            "Settings" -> "⚙"
-            "Battery" -> "▰"
-            else -> "×"
+        item.background = GradientDrawable().apply {
+            setColor(Color.rgb(30, 33, 40))
+            cornerRadius = dp(13).toFloat()
+            setStroke(dp(1), Color.rgb(52, 55, 64))
         }
-        item.addView(label(icon, 21f, gold, true).apply { gravity = Gravity.CENTER })
-        item.addView(label(name.uppercase(), 9f, Color.WHITE, true).apply { gravity = Gravity.CENTER }, topMargin(5))
+        val iconRes = when (name) {
+            "Wi-Fi" -> R.drawable.ic_wifi
+            "Bluetooth" -> R.drawable.ic_bluetooth
+            "Flashlight" -> R.drawable.ic_flashlight
+            "Auto-rotate" -> R.drawable.ic_rotate
+            "DND" -> R.drawable.ic_dnd
+            "Settings" -> R.drawable.ic_settings
+            "Battery" -> R.drawable.ic_battery
+            else -> R.drawable.ic_close
+        }
+        val symbol = ImageView(this).apply {
+            setImageResource(iconRes)
+            setColorFilter(gold)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            contentDescription = "$name symbol"
+        }
+        item.addView(symbol, LinearLayout.LayoutParams(dp(27), dp(27)))
+        item.addView(label(name.uppercase(), 8.5f, Color.WHITE, true).apply {
+            gravity = Gravity.CENTER
+            letterSpacing = .035f
+        }, topMargin(6))
         item.setOnClickListener {
             when (name) {
                 "Wi-Fi" -> openSystemPanel("wifi")
