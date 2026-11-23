@@ -447,7 +447,7 @@ class SpaceOverlayService : Service() {
                 "Bluetooth" -> launchSettings(Settings.ACTION_BLUETOOTH_SETTINGS)
                 "Flashlight" -> toggleTorch(item)
                 "Auto-rotate" -> launchSettings(Settings.ACTION_DISPLAY_SETTINGS)
-                "DND" -> launchSettings(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                "DND" -> toggleDnd()
                 "Settings" -> launchSettings(Settings.ACTION_SETTINGS)
                 "Battery" -> launchSettings(Settings.ACTION_BATTERY_SAVER_SETTINGS)
                 "Close" -> closePanel()
@@ -545,6 +545,25 @@ class SpaceOverlayService : Service() {
         val battery = sample.batteryPercent?.let { "${it}%" } ?: "N/A"
         val batteryTemp = sample.batteryTemperatureC?.let { "${it} °C" } ?: "N/A"
         telemetry?.text = "CPU LOAD       $lastCpu      •      CPU CLOCK       $cpuClock\nGPU LOAD       ${sample.gpuPercent?.let { "${it.roundToInt()}%" } ?: "N/A"}      •      GPU CLOCK       $gpuClock\nRAM USED       $ram\nBATTERY       $battery      •      BATTERY TEMP       $batteryTemp\nTHERMAL STATUS       ${sample.thermalStatus}\nGAME FPS       N/A  ·  Not exposed by standard cross-app APIs"
+    }
+
+    private fun toggleDnd() {
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        if (!manager.isNotificationPolicyAccessGranted) {
+            launchSettings(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+            Toast.makeText(this, "Allow Do Not Disturb access, then tap again.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        try {
+            val enableDnd = manager.currentInterruptionFilter == android.app.NotificationManager.INTERRUPTION_FILTER_ALL
+            manager.setInterruptionFilter(
+                if (enableDnd) android.app.NotificationManager.INTERRUPTION_FILTER_NONE
+                else android.app.NotificationManager.INTERRUPTION_FILTER_ALL
+            )
+            Toast.makeText(this, if (enableDnd) "Do Not Disturb ON" else "Do Not Disturb OFF", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Could not change Do Not Disturb: ${e.message ?: "system restriction"}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun toggleTorch(view: View) {
