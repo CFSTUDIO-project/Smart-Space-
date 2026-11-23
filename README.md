@@ -70,7 +70,7 @@ The following diagrams are hand-authored SVG previews of the product direction. 
 | Camera / flashlight permission | Included | Torch action uses CameraManager where hardware supports it |
 | Modify system settings | Included | Needed for the brightness control |
 | Battery / background guidance | Included | Opens Android battery settings; no hidden exemption |
-| Shizuku onboarding | Guide only | Current build can detect/open Shizuku, but does not yet call Shizuku APIs |
+| Shizuku authorization | Included | Checks the live Shizuku Binder and requests genuine user authorization through the official API; no privileged commands are run yet |
 | Slim vertical trigger | Included | Draggable edge handle with a 4dp visible line |
 | Floating panel | Included | WindowManager application overlay |
 | Enter / exit motion | Included | Slides in from and returns to the right edge |
@@ -124,11 +124,11 @@ Smart Space does not silently grant itself privileged access.
 | Camera | Turn on the physical flash as a torch | Runtime permission; only used by the flashlight action |
 | Modify system settings | Change screen brightness from the panel | Grant special access in Android Settings |
 | Battery optimization | Review background restrictions | Open Android battery settings; exemption is optional |
-| Shizuku | Future advanced integrations | Install/start Shizuku and authorize supported operations separately |
+| Shizuku | Optional advanced access | Install and start Shizuku separately, then authorize Smart Space through Shizuku's real permission dialog |
 
 ### Shizuku is not root
 
-Shizuku can provide shell/ADB identity on a non-rooted device or root identity when the device is configured for root. Its capabilities depend on the server being started and the permissions available on that Android version. The current Smart Space foundation does not claim that installing Shizuku automatically gives this app root or extra privileges.
+Shizuku can provide shell/ADB identity on a non-rooted device or root identity when the device is configured for root. Its capabilities depend on the server being started and the permissions available on that Android version. The current Smart Space foundation uses the official API to check the Binder connection and request user authorization. It does not execute shell commands or claim root access. Installing Shizuku alone does not start its service or grant Smart Space permission.
 
 ## Telemetry: what the numbers mean
 
@@ -200,7 +200,7 @@ APK output: app/build/outputs/apk/debug/app-debug.apk
 - [x] App discovery for the four requested apps
 - [x] Device telemetry with explicit unavailable states
 - [ ] Validate runtime behavior on Infinix Hot 60i
-- [ ] Add Shizuku API integration for scoped advanced operations
+- [ ] Add individually-scoped advanced controls that use an authorized Shizuku connection only where the Android version and device support them
 - [ ] Add per-game profiles and user-controlled auto-show rules
 - [ ] Add session history and benchmark comparisons
 - [ ] Expand OEM GPU telemetry adapters
@@ -230,5 +230,6 @@ Smart Space is an independent open-source Android project. This repository is th
 - [Android settings panels](https://developer.android.com/reference/android/provider/Settings.Panel)
 - [Camera torch API](https://developer.android.com/reference/android/hardware/camera2/CameraManager#setTorchMode(java.lang.String,boolean))
 - [Shizuku API and developer guide](https://github.com/RikkaApps/Shizuku-API)
+- [Shizuku API on Maven Central](https://central.sonatype.com/artifact/dev.rikka.shizuku/api)
 
 <div align="center"><sub>SMART SPACE · SS · ANDROID GAMING CONTROL LAYER</sub></div>
