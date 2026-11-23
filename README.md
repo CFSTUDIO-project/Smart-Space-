@@ -63,7 +63,7 @@ The following diagrams are hand-authored SVG previews of the product direction. 
 
 | Feature | Status in this foundation | Details |
 |---|---|---|
-| Animated splash screen | Included | Logo and progress rail reveal |
+| Animated splash screen | Included | Logo and progress rail reveal |\n| Boot sequence | Included | Elapsed timer and verified overlay/service/window status |
 | AUTHORIZED onboarding | Included | Permission checklist with real Android Settings and runtime prompts |
 | Overlay permission | Included | Checks Android special overlay access |
 | Notification permission | Included | Runtime request on Android 13+ |
@@ -74,7 +74,7 @@ The following diagrams are hand-authored SVG previews of the product direction. 
 | Slim vertical trigger | Included | Draggable edge handle with a 4dp visible line |
 | Floating panel | Included | WindowManager application overlay |
 | Enter / exit motion | Included | Slides in from and returns to the right edge |
-| Panel resize | Included | Drag the lower-right resize grip |
+| Panel move / resize | Included | Drag the title area to move; drag the lower-right grip to resize |
 | Scrollable content | Included | Metrics, quick controls, sliders and app shortcuts |
 | Portrait / landscape | Included | Overlay dimensions recalculate on orientation changes |
 | Chrome / TikTok / WhatsApp / YouTube | Included | Only installed apps with launch activities are displayed |
@@ -98,7 +98,7 @@ The following diagrams are hand-authored SVG previews of the product direction. 
 4. The slim vertical handle appears above other apps.
 5. Drag the handle to reposition it, or tap to open the floating panel.
 6. The panel slides in from the right edge. Scroll to see more controls.
-7. Drag the lower-right grip to resize the panel.
+7. Drag the title area to move the panel, or the lower-right grip to resize it.
 8. Tap close and watch the panel slide back out; the edge handle returns.
 
 ### Main app
