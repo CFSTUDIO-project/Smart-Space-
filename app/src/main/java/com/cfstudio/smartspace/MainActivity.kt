@@ -247,7 +247,11 @@ class MainActivity : Activity() {
         page = Page.SETTINGS
         val body = makePage()
         addHeader(body, "SETTINGS", "PERSONALIZE YOUR SPACE")
-        body.addView(text("Control the experience", 25f, Color.WHITE, true), marginParams(-1, -2, top = 12, bottom = 18))
+        body.addView(text("Control the experience", 25f, Color.WHITE, true),
+            marginParams(-1, -2, top = 12, bottom = 8))
+        body.addView(text("Choose how the floating layer is arranged. Changes apply the next time you open the panel.",
+            13f, muted), marginParams(-1, -2, bottom = 16))
+
         val serviceSwitch = Switch(this).apply {
             text = "Floating panel enabled"
             setTextColor(Color.WHITE)
@@ -256,28 +260,90 @@ class MainActivity : Activity() {
                 if (checked) startOverlay() else stopOverlay()
             }
         }
-        val switchCard = card().apply { addView(serviceSwitch) }
-        body.addView(switchCard, marginParams(-1, -2, bottom = 12))
-        val prefsCard = card()
-        prefsCard.addView(text("PANEL APPEARANCE", 11f, gold, true))
-        prefsCard.addView(text("Panel opacity", 14f, Color.WHITE), marginParams(-1, -2, top = 12))
+        body.addView(card().apply { addView(serviceSwitch) },
+            marginParams(-1, -2, bottom = 14))
+
+        val layoutCard = card()
+        layoutCard.addView(text("PANEL LAYOUT", 10f, gold, true))
+        layoutCard.addView(text("Dual layout keeps the vertical app dock beside the dashboard. Full layout hides the dock and uses one wide panel.",
+            12f, muted), marginParams(-1, -2, top = 7))
+        val layoutRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val selectedLayout = prefs.getString("layout_mode", "dual") ?: "dual"
+        layoutRow.addView(button(if (selectedLayout == "dual") "DUAL  ·  ACTIVE" else "DUAL PANEL", selectedLayout == "dual") {
+            prefs.edit().putString("layout_mode", "dual").apply()
+            showSettings()
+        }, LinearLayout.LayoutParams(0, dp(46), 1f).apply { marginEnd = dp(6) })
+        layoutRow.addView(button(if (selectedLayout == "full") "FULL  ·  ACTIVE" else "FULL PANEL", selectedLayout == "full") {
+            prefs.edit().putString("layout_mode", "full").apply()
+            showSettings()
+        }, LinearLayout.LayoutParams(0, dp(46), 1f))
+        layoutCard.addView(layoutRow, marginParams(-1, -2, top = 12))
+        body.addView(layoutCard, marginParams(-1, -2, bottom = 12))
+
+        val dockCard = card()
+        dockCard.addView(text("DOCK POSITION", 10f, gold, true))
+        val sideRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val side = prefs.getString("dock_side", "left") ?: "left"
+        sideRow.addView(button(if (side == "left") "LEFT  ·  ACTIVE" else "LEFT", side == "left") {
+            prefs.edit().putString("dock_side", "left").apply()
+            showSettings()
+        }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginEnd = dp(6) })
+        sideRow.addView(button(if (side == "right") "RIGHT  ·  ACTIVE" else "RIGHT", side == "right") {
+            prefs.edit().putString("dock_side", "right").apply()
+            showSettings()
+        }, LinearLayout.LayoutParams(0, dp(44), 1f))
+        dockCard.addView(sideRow, marginParams(-1, -2, top = 10))
+        val shortcuts = Switch(this).apply {
+            text = "Show installed app shortcuts"
+            setTextColor(Color.WHITE)
+            isChecked = prefs.getBoolean("show_app_shortcuts", true)
+            setOnCheckedChangeListener { _, checked ->
+                prefs.edit().putBoolean("show_app_shortcuts", checked).apply()
+            }
+        }
+        dockCard.addView(shortcuts, marginParams(-1, -2, top = 10))
+        body.addView(dockCard, marginParams(-1, -2, bottom = 12))
+
+        val appearance = card()
+        appearance.addView(text("PANEL OPACITY", 10f, gold, true))
+        appearance.addView(text("Adjust the panel surface transparency. Text and controls remain fully opaque.",
+            12f, muted), marginParams(-1, -2, top = 6))
         val opacity = SeekBar(this).apply {
-            max = 100
-            progress = prefs.getInt("opacity", 96)
+            max = 28
+            progress = (prefs.getInt("opacity", 96).coerceIn(72, 100) - 72)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
-                    if (fromUser) prefs.edit().putInt("opacity", value.coerceAtLeast(65)).apply()
+                    if (fromUser) prefs.edit().putInt("opacity", value + 72).apply()
                 }
                 override fun onStartTrackingTouch(seekBar: SeekBar?) {}
                 override fun onStopTrackingTouch(seekBar: SeekBar?) {}
             })
         }
-        prefsCard.addView(opacity, marginParams(-1, -2, top = 4))
-        prefsCard.addView(text("The edge trigger stays intentionally slim. Use the handle itself to reposition it.", 12f, muted), marginParams(-1, -2, top = 8))
-        body.addView(prefsCard, marginParams(-1, -2, bottom = 12))
-        body.addView(actionCard("Permissions", "Review overlay, notification, camera and system access.", "OPEN AUTHORIZED") { showAuthorized() }, marginParams(-1, -2, bottom = 12))
-        body.addView(actionCard("Battery settings", "Review background restrictions applied by your phone manufacturer.", "OPEN SETTINGS") {
-            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+        appearance.addView(opacity, marginParams(-1, -2, top = 5))
+        body.addView(appearance, marginParams(-1, -2, bottom = 12))
+
+        body.addView(actionCard("Reset floating positions",
+            "Return the edge handle and panel to their default screen positions.",
+            "RESET POSITIONS") {
+            try {
+                val intent = Intent(this, SpaceOverlayService::class.java)
+                    .setAction(SpaceOverlayService.ACTION_RESET_POSITION)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
+                else startService(intent)
+                toast("Reset request sent to Smart Space.")
+            } catch (_: Exception) {
+                toast("Start Smart Space first, then reset positions.")
+            }
+        }, marginParams(-1, -2, bottom = 12))
+
+        body.addView(actionCard("Permissions",
+            "Review overlay, camera, brightness and Do Not Disturb access.",
+            "OPEN AUTHORIZED") { showAuthorized() }, marginParams(-1, -2, bottom = 12))
+        body.addView(actionCard("Device power settings",
+            "Review battery and background restrictions applied by your phone.",
+            "OPEN SETTINGS") {
+            try { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
+            catch (_: Exception) { startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))) }
         }, marginParams(-1, -2, bottom = 12))
         addNavigation(body)
         root.removeAllViews()
@@ -299,7 +365,7 @@ class MainActivity : Activity() {
         body.addView(text("CREATED BY", 10f, gold, true), marginParams(-1, -2, top = 8))
         body.addView(text("CFSTUDIO-project", 18f, Color.WHITE, true), marginParams(-1, -2, top = 5))
         body.addView(button("SEE MORE  ↗", true) { openUrl(repoUrl) }, marginParams(-1, dp(52), top = 16))
-        body.addView(text("Smart Space · SS · Version 2.0.1", 11f, muted), marginParams(-1, -2, top = 14, bottom = 20))
+        body.addView(text("Smart Space · SS · Version 3.0.0", 11f, muted), marginParams(-1, -2, top = 14, bottom = 20))
         addNavigation(body)
         root.removeAllViews()
         root.addView(wrapScroll(body))
