@@ -81,10 +81,12 @@ class MainActivity : Activity() {
             letterSpacing = .12f
         }, marginParams(-1, -2, top = 14))
         root.addView(wrap, FrameLayout.LayoutParams(-1, -1))
-        fill.layoutParams = FrameLayout.LayoutParams(0, dp(3))
+        fill.layoutParams = FrameLayout.LayoutParams(dp(148), dp(3))
+        fill.pivotX = 0f
+        fill.scaleX = 0f
         fill.post {
-            fill.animate().withLayer().setDuration(1050L).setInterpolator(android.view.animation.DecelerateInterpolator())
-                .apply { fill.layoutParams = FrameLayout.LayoutParams(dp(148), dp(3)); fill.requestLayout() }.start()
+            fill.animate().withLayer().scaleX(1f).setDuration(1050L)
+                .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
         }
         handler.postDelayed({
             page = Page.AUTHORIZED
@@ -126,7 +128,7 @@ class MainActivity : Activity() {
             }
         })
         val shizukuInstalled = packageInstalled("moe.shizuku.privileged.api")
-        addPermissionCard(body, "06", "Shizuku (optional)", if (shizukuInstalled) "Shizuku app detected. Start its service and authorize Smart Space there when advanced integrations are added." else "Optional advanced access. Install and start Shizuku separately; this is not root and is not required for the overlay.", shizukuInstalled, if (shizukuInstalled) "OPEN SHIZUKU" else "SHIZUKU GUIDE", {
+        addPermissionCard(body, "06", "Shizuku (optional)", if (shizukuInstalled) "Shizuku app detected. The current build does not request Shizuku privileges; overlay and device basics work without it." else "Optional advanced access. Install and start Shizuku separately; this is not root and is not required for the overlay.", false, if (shizukuInstalled) "OPEN SHIZUKU" else "SHIZUKU GUIDE", {
             val launch = packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
             if (launch != null) startActivity(launch) else openUrl("https://shizuku.rikka.app/")
         })
