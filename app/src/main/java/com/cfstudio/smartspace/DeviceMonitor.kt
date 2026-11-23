@@ -63,22 +63,24 @@ class DeviceMonitor(private val context: Context) {
         )
     }
 
-    private fun readCpuPercent(): Float? = try {
-        val line = File("/proc/stat").useLines { it.firstOrNull { row -> row.startsWith("cpu ") } } ?: return null
-        val values = line.trim().split(Regex("\\s+")).drop(1).mapNotNull { it.toLongOrNull() }
-        if (values.size < 4) return null
-        val idle = values[3] + (values.getOrNull(4) ?: 0L)
-        val total = values.sum()
-        val previousTotal = lastCpuTotal
-        val previousIdle = lastCpuIdle
-        lastCpuTotal = total
-        lastCpuIdle = idle
-        if (previousTotal == null || previousIdle == null) return null
-        val totalDelta = total - previousTotal
-        val idleDelta = idle - previousIdle
-        if (totalDelta <= 0L) null else (((totalDelta - idleDelta).toFloat() / totalDelta) * 100f).coerceIn(0f, 100f)
-    } catch (_: Exception) {
-        null
+    private fun readCpuPercent(): Float? {
+        return try {
+            val line = File("/proc/stat").useLines { it.firstOrNull { row -> row.startsWith("cpu ") } } ?: return null
+            val values = line.trim().split(Regex("\\s+")).drop(1).mapNotNull { it.toLongOrNull() }
+            if (values.size < 4) return null
+            val idle = values[3] + (values.getOrNull(4) ?: 0L)
+            val total = values.sum()
+            val previousTotal = lastCpuTotal
+            val previousIdle = lastCpuIdle
+            lastCpuTotal = total
+            lastCpuIdle = idle
+            if (previousTotal == null || previousIdle == null) return null
+            val totalDelta = total - previousTotal
+            val idleDelta = idle - previousIdle
+            if (totalDelta <= 0L) null else (((totalDelta - idleDelta).toFloat() / totalDelta) * 100f).coerceIn(0f, 100f)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun readGpuPercent(): Float? {
@@ -135,17 +137,19 @@ class DeviceMonitor(private val context: Context) {
         return null
     }
 
-    private fun readFrequency(file: File): Long? = try {
-        if (!file.canRead()) return null
-        val raw = file.readText().trim().toLongOrNull() ?: return null
-        if (raw <= 0L) return null
-        // Most cpufreq/devfreq nodes report Hz or kHz. Values below 100,000 are already MHz on some vendor nodes.
-        when {
-            raw >= 100_000_000L -> raw / 1_000_000L
-            raw >= 100_000L -> raw / 1_000L
-            else -> raw
+    private fun readFrequency(file: File): Long? {
+        return try {
+            if (!file.canRead()) return null
+            val raw = file.readText().trim().toLongOrNull() ?: return null
+            if (raw <= 0L) return null
+            // Most cpufreq/devfreq nodes report Hz or kHz. Values below 100,000 are already MHz on some vendor nodes.
+            when {
+                raw >= 100_000_000L -> raw / 1_000_000L
+                raw >= 100_000L -> raw / 1_000L
+                else -> raw
+            }
+        } catch (_: Exception) {
+            null
         }
-    } catch (_: Exception) {
-        null
     }
 }
