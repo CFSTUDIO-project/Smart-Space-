@@ -90,8 +90,22 @@ class SpaceOverlayService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForegroundCompat()
         if (intent?.action == ACTION_RESET_POSITION) {
-            resetPositions()
-            return START_STICKY
+            val overlayWasActive = prefs.getBoolean("overlay_running", false) ||
+                handleView != null || panelView != null
+            if (overlayWasActive) {
+                resetPositions()
+            } else {
+                prefs.edit().remove("handle_x").remove("handle_y")
+                    .remove("panel_x").remove("panel_y").apply()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(true)
+                }
+                stopSelf()
+            }
+            return START_NOT_STICKY
         }
         if (!Settings.canDrawOverlays(this)) {
             prefs.edit().putBoolean("overlay_running", false)
@@ -619,7 +633,11 @@ class SpaceOverlayService : Service() {
     }
 
     private fun renderMode(mode: String) {
-        currentMode = if (mode == "tools") "tools" else "performance"
+        currentMode = when (mode) {
+            "tools" -> "tools"
+            "apps" -> "apps"
+            else -> "performance"
+        }
         val host = contentHost ?: return
         host.removeAllViews()
         cpuGauge = null
@@ -629,15 +647,20 @@ class SpaceOverlayService : Service() {
         batteryValue = null
         refreshValue = null
 
-        val screen = if (currentMode == "tools") buildToolsView() else buildPerformanceView()
+        val screen = when (currentMode) {
+            "tools" -> buildToolsView()
+            "apps" -> buildAppsView()
+            else -> buildPerformanceView()
+        }
         host.addView(screen, FrameLayout.LayoutParams(-1, -2))
         dockView?.let {
             if (it.childCount > 1) {
+                val toolsSelected = currentMode == "tools" || currentMode == "apps"
                 it.getChildAt(1).background = rounded(
                     if (currentMode == "performance") Color.rgb(48, 40, 24) else Color.TRANSPARENT, 12f
                 )
                 it.getChildAt(2).background = rounded(
-                    if (currentMode == "tools") Color.rgb(48, 40, 24) else Color.TRANSPARENT, 12f
+                    if (toolsSelected) Color.rgb(48, 40, 24) else Color.TRANSPARENT, 12f
                 )
             }
         }
@@ -770,7 +793,7 @@ class SpaceOverlayService : Service() {
                 "DND" -> toggleDnd()
                 "Battery" -> launchSettings(Settings.ACTION_BATTERY_SAVER_SETTINGS)
                 "Settings" -> launchSettings(Settings.ACTION_SETTINGS)
-                "Apps" -> renderMode("performance")
+                "Apps" -> renderMode("apps")
             }
         }
         return tile
@@ -852,6 +875,32 @@ class SpaceOverlayService : Service() {
         }
         wrap.addView(slider, topMargin(5))
         return wrap
+    }
+
+    private fun buildAppsView(): View {
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(12), 0, dp(14))
+            setBackgroundColor(Color.TRANSPARENT)
+        }
+        content.addView(sectionHeader(R.drawable.ic_apps, "INSTALLED APP SHORTCUTS"), margins(bottom = 10))
+        content.addView(label("Only apps found on this device are shown below.", 10f, muted, false),
+            margins(bottom = 10))
+        content.addView(buildAppsGrid())
+        content.addView(label("App shortcuts are launched directly. Smart Space does not read their private data.",
+            9f, muted, false), margins(top = 10))
+        val back = TextView(this).apply {
+            text = "BACK TO DEVICE TOOLS"
+            textSize = 9f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(gold)
+            gravity = Gravity.CENTER
+            setPadding(dp(12), dp(13), dp(12), dp(13))
+            background = rounded(Color.rgb(43, 38, 27), 10f)
+            setOnClickListener { renderMode("tools") }
+        }
+        content.addView(back, margins(top = 16))
+        return content
     }
 
     private fun buildAppsGrid(): View {
