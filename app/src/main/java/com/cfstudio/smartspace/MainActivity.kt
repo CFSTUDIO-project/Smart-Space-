@@ -2,16 +2,19 @@ package com.cfstudio.smartspace
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.Gravity
 import android.view.View
@@ -24,6 +27,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.Space
+import android.widget.ProgressBar
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
@@ -33,6 +37,8 @@ class MainActivity : Activity() {
     private enum class Page { AUTHORIZED, HOME, SETTINGS, ABOUT }
     private var page = Page.AUTHORIZED
     private lateinit var root: FrameLayout
+    private var bootDialog: AlertDialog? = null
+    private var bootRunnable: Runnable? = null
     private val handler = Handler(Looper.getMainLooper())
     private val prefs by lazy { getSharedPreferences("smart_space", Context.MODE_PRIVATE) }
     private val gold = Color.rgb(225, 181, 70)
@@ -481,14 +487,136 @@ class MainActivity : Activity() {
             startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
             return
         }
+        prefs.edit().putBoolean("overlay_window_ready", false).apply()
+        showBootSequence()
         try {
             val intent = Intent(this, SpaceOverlayService::class.java).setAction(SpaceOverlayService.ACTION_START)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
-            prefs.edit().putBoolean("overlay_running", true).apply()
-            toast("Smart Space is activating.")
         } catch (e: Exception) {
+            bootDialog?.dismiss()
+            prefs.edit().putBoolean("overlay_running", false).putBoolean("overlay_window_ready", false).apply()
             toast("Could not start the overlay: ${e.message ?: "system restriction"}")
         }
+    }
+
+    private fun showBootSequence() {
+        bootRunnable?.let { handler.removeCallbacks(it) }
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(22), dp(22), dp(18))
+            background = rounded(Color.rgb(17, 19, 24), 22f)
+        }
+        panel.addView(text("SMART SPACE  /  SYSTEM START", 10f, gold, true))
+        panel.addView(text("Bringing your edge online.", 22f, Color.WHITE, true), marginParams(-1, -2, top = 13))
+        val status = text("INITIALIZING DEVICE LAYER", 10f, gold, true)
+        status.letterSpacing = .1f
+        panel.addView(status, marginParams(-1, -2, top = 19))
+        val timer = text("BOOT TIME  0.0 s", 12f, muted, true)
+        panel.addView(timer, marginParams(-1, -2, top = 7))
+        val progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            progress = 8
+            if (Build.VERSION.SDK_INT >= 21) {
+                progressTintList = android.content.res.ColorStateList.valueOf(gold)
+                progressBackgroundTintList = android.content.res.ColorStateList.valueOf(Color.rgb(52, 55, 63))
+            }
+        }
+        panel.addView(progress, marginParams(-1, dp(5), top = 16, bottom = 17))
+
+        val stateLabels = mutableListOf<TextView>()
+        listOf("OVERLAY PERMISSION", "FOREGROUND SERVICE", "FLOATING WINDOW").forEach { item ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(12), dp(11), dp(12), dp(11))
+                background = rounded(Color.rgb(28, 31, 38), 11f)
+            }
+            row.addView(text(item, 10f, Color.rgb(219, 222, 228), true), LinearLayout.LayoutParams(0, -2, 1f))
+            val value = text("CHECKING", 9f, muted, true).apply { gravity = Gravity.CENTER }
+            stateLabels.add(value)
+            row.addView(value)
+            panel.addView(row, marginParams(-1, -2, bottom = 7))
+        }
+        val details = text("Checking the Android display layer…", 12f, muted)
+        panel.addView(details, marginParams(-1, -2, top = 7, bottom = 16))
+        val stop = button("STOP STARTUP", false) {
+            bootDialog?.dismiss()
+            stopOverlay()
+        }
+        panel.addView(stop, marginParams(-1, dp(46)))
+        val dialog = AlertDialog.Builder(this).setView(panel).create()
+        bootDialog = dialog
+        dialog.setCancelable(false)
+        dialog.setCanceledOnTouchOutside(false)
+        dialog.setOnDismissListener {
+            bootRunnable?.let { handler.removeCallbacks(it) }
+            bootRunnable = null
+            if (bootDialog === dialog) bootDialog = null
+        }
+        dialog.show()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        val startedAt = SystemClock.elapsedRealtime()
+        val poll = object : Runnable {
+            override fun run() {
+                if (!dialog.isShowing) return
+                val elapsed = SystemClock.elapsedRealtime() - startedAt
+                val serviceReady = prefs.getBoolean("overlay_running", false)
+                val windowReady = prefs.getBoolean("overlay_window_ready", false)
+                timer.text = String.format(java.util.Locale.US, "BOOT TIME  %.1f s", elapsed / 1000f)
+                val states = listOf(
+                    overlayGranted(),
+                    serviceReady,
+                    windowReady
+                )
+                states.forEachIndexed { index, ready ->
+                    stateLabels[index].text = if (ready) "READY" else when (index) {
+                        0 -> "CHECKING"
+                        1 -> if (overlayGranted()) "STARTING" else "WAITING"
+                        else -> if (serviceReady) "VERIFYING" else "WAITING"
+                    }
+                    stateLabels[index].setTextColor(if (ready) Color.rgb(116, 211, 153) else gold)
+                }
+                progress.progress = when {
+                    windowReady -> 100
+                    serviceReady -> 72
+                    overlayGranted() -> 28
+                    else -> 8
+                }
+                when {
+                    windowReady -> {
+                        status.text = "STATUS  /  READY · ACTIVE"
+                        status.setTextColor(Color.rgb(116, 211, 153))
+                        details.text = "The floating edge trigger is now attached to the screen."
+                        handler.postDelayed({
+                            if (bootDialog === dialog && dialog.isShowing) {
+                                dialog.dismiss()
+                                if (page == Page.HOME) showHome()
+                            }
+                        }, 850L)
+                        return
+                    }
+                    elapsed > 15000L -> {
+                        status.text = "STATUS  /  WINDOW NOT CONFIRMED"
+                        status.setTextColor(Color.rgb(239, 174, 91))
+                        details.text = "Android has not confirmed the floating window. Check overlay access and your device's background restrictions."
+                        stop.text = "CLOSE"
+                        stop.setOnClickListener { dialog.dismiss() }
+                        return
+                    }
+                    serviceReady -> {
+                        status.text = "VERIFYING FLOATING WINDOW"
+                        details.text = "Foreground service is active. Waiting for Android to attach the edge layer."
+                    }
+                    else -> {
+                        status.text = "INITIALIZING DEVICE LAYER"
+                        details.text = "Checking permission, service availability and display access."
+                    }
+                }
+                handler.postDelayed(this, 120L)
+            }
+        }
+        bootRunnable = poll
+        handler.post(poll)
     }
 
     private fun stopOverlay() {
